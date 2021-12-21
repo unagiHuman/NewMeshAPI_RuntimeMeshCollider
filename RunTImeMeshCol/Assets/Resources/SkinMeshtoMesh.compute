@@ -1,0 +1,33 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+struct VertexData
+{
+    float3 pos;
+    float3 nor;
+    float2 uv;
+};
+
+ByteAddressBuffer Verts;
+
+float4x4 LocalToWorld;
+
+RWStructuredBuffer<VertexData> vertexBuffer;
+
+[numthreads(32, 1, 1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    //https://github.com/cinight/MinimalCompute/blob/master/Assets/SkinnedMeshBuffer/SkinnedMeshBuffer.shader
+    //のGetVertexData_Positionの処理を参考にしました。
+    
+    //layout for vertex buffer (observed by using RenderDoc):
+    //float3 position
+    //float3 normal
+    //float4 tangent
+    //therefore total 10 floats and 4 bytes each = 10*4 = 40
+    int vidx = id.x * 40;
+    uint3 praw = Verts.Load3(vidx);
+    float3 lvert = asfloat(praw);
+    float4 vert = mul(LocalToWorld, float4(lvert, 1));
+    vertexBuffer[id.x].pos = float3(vert.xyz);
+}
